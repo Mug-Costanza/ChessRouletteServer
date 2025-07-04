@@ -7,18 +7,33 @@ const cors = require('cors');
 
 const app = express();
 
-// ✅ Open to all origins for testing
-app.use(cors({ origin: 'https://chess-roulette.com' }));
+const allowedOrigins = [
+  'https://chess-roulette.com',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 app.get('/', (req, res) => res.send({ status: 'healthy' }));
 
 const server = http.createServer(app);
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 const io = socketio(server, {
   cors: {
-    origin: 'https://chess-roulette.com',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
   },
 });
