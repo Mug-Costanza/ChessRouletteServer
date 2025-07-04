@@ -6,7 +6,9 @@ const { Chess } = require('chess.js');
 const cors = require('cors');
 
 const app = express();
-app.use(cors({ origin: '*' }));
+
+// ✅ Open to all origins for testing
+app.use(cors({ origin: 'https://chess-roulette.com' }));
 app.use(express.json());
 
 app.get('/', (req, res) => res.send({ status: 'healthy' }));
@@ -15,16 +17,16 @@ const server = http.createServer(app);
 const PORT = 3001;
 
 const io = socketio(server, {
-    cors: {
-        origin: 'http://localhost:3000',
-        methods: ['GET', 'POST'],
-    },
+  cors: {
+    origin: 'https://chess-roulette.com',
+    methods: ['GET', 'POST'],
+  },
 });
 
 function getBaseTime(timeControl) {
     if (timeControl === 'bullet') return 60;
     if (timeControl === 'blitz') return 180;
-    return 600; // rapid default
+    return 600;
 }
 
 function stopGameInterval(currentGame) {
@@ -46,9 +48,8 @@ io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
     socket.on('create', ({ gameID, timeControl }, callback) => {
-        if (games.has(gameID)) {
-            return callback({ error: 'Game ID already exists' });
-        }
+        if (games.has(gameID)) return callback({ error: 'Game ID already exists' });
+
         const baseTime = getBaseTime(timeControl);
         const newGame = {
             players: [],
@@ -85,6 +86,7 @@ io.on('connection', (socket) => {
                 return callback({ gameID, name, color: player.color });
             }
         }
+
         const baseTime = getBaseTime(timeControl);
         const gameID = Math.random().toString().slice(2, 8);
         const newGame = {
@@ -118,9 +120,7 @@ io.on('connection', (socket) => {
         console.log(`Socket ${socket.id} attempting to join game ${gameID}`);
 
         const currentGame = game(gameID);
-        if (!currentGame) {
-            return callback({ error: 'Game not found' });
-        }
+        if (!currentGame) return callback({ error: 'Game not found' });
 
         let player = currentGame.players.find(p => p.playerID === socket.id);
         let opponent = currentGame.players.find(p => p.playerID !== socket.id);
@@ -139,7 +139,7 @@ io.on('connection', (socket) => {
         callback({ color: player.color, timeControl: currentGame.timeControl });
 
         io.to(gameID).emit('lobbyUpdate', {
-            players: currentGame.players.map((p) => p.name),
+            players: currentGame.players.map(p => p.name),
             gameID,
         });
 
@@ -155,8 +155,9 @@ io.on('connection', (socket) => {
 
         if (currentGame.players.length >= 2) {
             console.log(`[join] Players in game ${gameID}:`, currentGame.players);
-            const white = currentGame.players.find((p) => p.color === 'w');
-            const black = currentGame.players.find((p) => p.color === 'b');
+
+            const white = currentGame.players.find(p => p.color === 'w');
+            const black = currentGame.players.find(p => p.color === 'b');
 
             if (white && black) {
                 io.to(gameID).emit('message', {
@@ -216,7 +217,7 @@ io.on('connection', (socket) => {
             });
 
             io.to(gameID).emit('lobbyUpdate', {
-                players: currentGame.players.map((p) => p.name),
+                players: currentGame.players.map(p => p.name),
                 gameID,
             });
 
@@ -229,12 +230,10 @@ io.on('connection', (socket) => {
         const currentGame = game(gameID);
         if (!currentGame) return callback?.({ error: 'Game not found' });
 
-        const player = currentGame.players.find((p) => p.playerID === socket.id);
+        const player = currentGame.players.find(p => p.playerID === socket.id);
         if (!player) return callback?.({ error: 'Player not part of this game' });
 
-        if (player.color !== currentGame.turn) {
-            return callback?.({ error: 'Not your turn' });
-        }
+        if (player.color !== currentGame.turn) return callback?.({ error: 'Not your turn' });
 
         let wasRouletteKill = false;
 
@@ -287,9 +286,7 @@ io.on('connection', (socket) => {
         else if (chess.isInsufficientMaterial()) status = "insufficient-material";
         else if (chess.isThreefoldRepetition()) status = "threefold-repetition";
 
-        if (!status && chess.isGameOver()) {
-            status = "draw";
-        }
+        if (!status && chess.isGameOver()) status = "draw";
 
         if (status) {
             io.to(gameID).emit("gameOver", {
@@ -308,6 +305,7 @@ io.on('connection', (socket) => {
             status: 'resigned',
             player,
         });
+
         cleanupGame(gameID);
     });
 
@@ -321,7 +319,7 @@ io.on('connection', (socket) => {
             socket.broadcast.to(player.gameID).emit('opponentLeft');
 
             io.to(player.gameID).emit('lobbyUpdate', {
-                players: game(player.gameID)?.players.map((p) => p.name) || [],
+                players: game(player.gameID)?.players.map(p => p.name) || [],
                 gameID: player.gameID,
             });
 
@@ -331,4 +329,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => console.log('Server running on localhost: ' + PORT));
+server.listen(PORT, () => console.log('Server running on port: ' + PORT));
