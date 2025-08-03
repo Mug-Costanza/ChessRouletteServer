@@ -9,7 +9,7 @@ const app = express();
 
 const allowedOrigins = [
   'https://chess-roulette.com',
-  'https://mugcostanza64.itch.io/',
+  'https://html-classic.itch.zone',
   'http://localhost:3000',
   'http://localhost:3001'
 ];
