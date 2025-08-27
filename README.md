@@ -2,4 +2,4 @@
 
 To run, copy the repo and run "npm start".
 
-The full game is in a separate repo.
+The full game is here: https://github.com/Mug-Costanza/ChessRoulette
